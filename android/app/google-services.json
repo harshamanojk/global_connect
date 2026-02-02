@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "511331520219",
+    "project_id": "globalconnect-d62f5",
+    "storage_bucket": "globalconnect-d62f5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:511331520219:android:5bd03d1537a952059706fe",
+        "android_client_info": {
+          "package_name": "com.example.global_connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqSmrTXY02dmhAEMgTU-VSy4zTlmKyDuQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:511331520219:android:7f8d510e6aedc8699706fe",
+        "android_client_info": {
+          "package_name": "com.example.globalconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqSmrTXY02dmhAEMgTU-VSy4zTlmKyDuQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
