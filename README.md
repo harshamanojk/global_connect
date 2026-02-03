@@ -1,16 +1,42 @@
-# global_connect
+# GlobalConnect 🌍📞
 
-A new Flutter project.
+**Stay Connected Anywhere**  
+GlobalConnect is a mobile application designed for travelers to stay connected across countries **without relying on local SIM cards or Wi-Fi**. The app allows secure user registration, phone verification, and ID scanning as the foundation for future messaging and voice calling features.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## 🛠 Features (Planned / Implemented)
 
-A few resources to get you started if this is your first Flutter project:
+### Implemented so far:
+- Landing page UI with logo, slogan, and navigation
+- Login page with phone number input
+- Registration page with user details form
+- Scanning page for secure ID verification
+- Responsive design for mobile and tablet
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Planned Features:
+- Secure messaging without local SIM or Wi-Fi
+- Voice calls without local SIM or Wi-Fi
+- Cloud database integration for user info
+- User profile management and verification history
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## 📂 Project Structure
+
+global_connect/
+│
+├─ lib/
+│ ├─ screens/
+│ │ ├─ landing_page.dart
+│ │ ├─ login_page.dart
+│ │ ├─ register_page.dart
+| | ├─ components/
+│ │ └─ gradient_button.dart
+| | └─ IDTemplatePage.dart
+│ └─ main.dart
+├─ assets/
+│ └─ images/
+│ └─ LOGO.jpg
+├─ pubspec.yaml
+└─ README.md
