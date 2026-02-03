@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -25,13 +27,14 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => loading = true);
 
     try {
-      // Using Email as Login (recommended)
+      // Using Email as Login
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: phoneCtrl.text.trim(), // change label to Email
+        email: phoneCtrl.text.trim(), // Email input
         password: passCtrl.text.trim(),
       );
 
-      Navigator.pushReplacementNamed(context, '/');
+      // Redirect to Home Page after successful login
+      Navigator.pushReplacementNamed(context, '/home');
 
     } on FirebaseAuthException catch (e) {
       showMsg(e.message ?? "Login failed");
@@ -100,7 +103,7 @@ class _LoginPageState extends State<LoginPage> {
               child: loading
                   ? const Center(child: CircularProgressIndicator())
                   : GradientButton(
-                text: "LOGIN",
+                text: "SIGN IN",
                 onPressed: login,
               ),
             ),

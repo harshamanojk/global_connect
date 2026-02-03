@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:global_connect/screens/login.dart';
 import 'firebase_options.dart';
+
+// Screens
 import 'screens/landing_page.dart';
-import 'screens/register.dart';
+import 'screens/register_page.dart';
+import 'screens/login_page.dart';
+import 'screens/home_page.dart';
+import 'screens/emergency_bot_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +30,10 @@ class GlobalConnectApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const LandingPage(),
+        '/home': (context) => const HomePage(),
         '/register': (context) => const RegisterPage(),
-        '/login': (context) => const LoginPage()
+        '/login': (context) => const LoginPage(),
+        '/emergencyBot': (context) => const EmergencyBotPage(),
       },
     );
   }

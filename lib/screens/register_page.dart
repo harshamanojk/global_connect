@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:global_connect/components/IdTemplatePage.dart';
 import 'package:country_picker/country_picker.dart';
