@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../data/emergency_data.dart';
 
 class EmergencyBotPage extends StatefulWidget {
@@ -39,6 +40,17 @@ class _EmergencyBotPageState extends State<EmergencyBotPage> {
         error = "Country not found";
         result = null;
       });
+    }
+  }
+
+  Future<void> makeCall(String number) async {
+    final Uri url = Uri(scheme: 'tel', path: number);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cannot launch call")),
+      );
     }
   }
 
@@ -91,9 +103,16 @@ class _EmergencyBotPageState extends State<EmergencyBotPage> {
                     children: result!.entries.map((entry) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          "${entry.key}: ${entry.value}",
-                          style: const TextStyle(fontSize: 18),
+                        child: GestureDetector(
+                          onTap: () => makeCall(entry.value),
+                          child: Text(
+                            "${entry.key}: ${entry.value}",
+                            style: const TextStyle(
+                              fontSize: 18,
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       );
                     }).toList(),

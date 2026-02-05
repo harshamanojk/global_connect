@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+  State<ProfilePage> createState() => _ProfilePageState();
+}
 
+class _ProfilePageState extends State<ProfilePage> {
+  final user = FirebaseAuth.instance.currentUser;
+  File? _imageFile;
+
+  // Pick image from gallery
+  Future<void> _pickImage() async {
+    final pickedFile =
+    await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("My Profile"),
@@ -20,20 +40,32 @@ class ProfilePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
 
-            // Profile Icon
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.blue,
-              child: Icon(
-                Icons.person,
-                size: 60,
-                color: Colors.white,
+            // Editable Profile Image
+            GestureDetector(
+              onTap: _pickImage,
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Colors.blue,
+                backgroundImage:
+                _imageFile != null ? FileImage(_imageFile!) : null,
+                child: _imageFile == null
+                    ? const Icon(
+                  Icons.person,
+                  size: 60,
+                  color: Colors.white,
+                )
+                    : null,
               ),
+            ),
+            const SizedBox(height: 15),
+            const Text(
+              "Tap to change profile picture",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
 
             const SizedBox(height: 25),
 
-            // Email
+            // Email (read-only)
             Text(
               user?.email ?? "No Email Available",
               style: const TextStyle(
@@ -44,7 +76,7 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // User ID (hidden info, optional)
+            // User ID (read-only)
             Text(
               "User ID: ${user?.uid ?? "N/A"}",
               style: const TextStyle(
@@ -65,7 +97,6 @@ class ProfilePage extends StatelessWidget {
                 ),
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
-
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
