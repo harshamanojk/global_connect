@@ -1,114 +1,123 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'emergency_bot_page.dart';
-import '../data/emergency_data.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class HomePage extends StatelessWidget {
+import 'emergency_bot_page.dart';
+import 'profile_page.dart';
+import 'settings_page.dart';
+import 'contacts_page.dart';
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  void makeCall(BuildContext context, String number) async {
-    final Uri callUri = Uri(scheme: 'tel', path: number);
-    if (await canLaunchUrl(callUri)) {
-      await launchUrl(callUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cannot make a call to $number')),
-      );
-    }
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String userName = "User";
+  bool loading = true;
+
+  final user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserName();
   }
 
-  void showCountryCallDialog(BuildContext context) {
-    final TextEditingController countryCtrl = TextEditingController();
+  Future<void> fetchUserName() async {
+    if (user == null) return;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Select Country for Emergency Call'),
-          content: TextField(
-            controller: countryCtrl,
-            decoration: const InputDecoration(
-              hintText: "Enter country name",
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                String input = countryCtrl.text.trim();
-                if (input.isEmpty) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .get();
 
-                String formatted =
-                    input[0].toUpperCase() + input.substring(1).toLowerCase();
-
-                if (emergencyNumbers.containsKey(formatted)) {
-                  Navigator.pop(context);
-
-                  Map<String, String> numbers = emergencyNumbers[formatted]!;
-
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text('Emergency Numbers for $formatted'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: numbers.entries.map((entry) {
-                          return ListTile(
-                            title: Text('${entry.key}: ${entry.value}'),
-                            trailing: const Icon(Icons.call),
-                            onTap: () => makeCall(context, entry.value),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Country not found')),
-                  );
-                }
-              },
-              child: const Text('Search'),
-            ),
-          ],
-        );
-      },
-    );
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          userName = data['name'] ?? "User";
+          loading = false;
+        });
+      } else {
+        setState(() {
+          loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching name: $e");
+      setState(() {
+        loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("GlobalConnect Home"),
+        title: const Text("GlobalConnect"),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfilePage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 40),
-            const Text(
-              "Welcome to GlobalConnect!",
+            Text(
+              "Welcome, $userName!",
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 30),
-            const Text(
-              "Quick Access:",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 40),
+            // Contacts button
+            ElevatedButton.icon(
+              icon: const Icon(Icons.contacts, size: 28),
+              label: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text(
+                  "Contacts",
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ContactsPage(),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 20),
+            // Emergency Bot button
             ElevatedButton.icon(
               icon: const Icon(Icons.health_and_safety, size: 28),
               label: const Padding(
@@ -128,27 +137,36 @@ class HomePage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const EmergencyBotPage()),
+                    builder: (context) => const EmergencyBotPage(),
+                  ),
                 );
               },
             ),
             const SizedBox(height: 20),
+            // Settings button
             ElevatedButton.icon(
-              icon: const Icon(Icons.phone, size: 28),
+              icon: const Icon(Icons.settings, size: 28),
               label: const Padding(
                 padding: EdgeInsets.symmetric(vertical: 14),
                 child: Text(
-                  "Emergency Call",
+                  "Settings",
                   style: TextStyle(fontSize: 20),
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: Colors.blueGrey,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () => showCountryCallDialog(context),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
+              },
             ),
           ],
         ),

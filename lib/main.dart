@@ -8,6 +8,7 @@ import 'screens/register_page.dart';
 import 'screens/login_page.dart';
 import 'screens/home_page.dart';
 import 'screens/emergency_bot_page.dart';
+import 'screens/emergency_call_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,7 @@ class GlobalConnectApp extends StatelessWidget {
         '/register': (context) => const RegisterPage(),
         '/login': (context) => const LoginPage(),
         '/emergencyBot': (context) => const EmergencyBotPage(),
+        '/emergencyCall': (context) => const EmergencyCallPage(),
       },
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:global_connect/components/IdTemplatePage.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../components/gradient_button.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -21,8 +22,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Country? selectedCountry;
   bool agree = false;
-
-  // 🔹 For password visibility
   bool showPassword = false;
 
   void submit() async {
@@ -36,6 +35,7 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    // Navigate to ID Template page
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -44,18 +44,35 @@ class _RegisterPageState extends State<RegisterPage> {
     );
 
     if (result == true) {
+      setState(() {});
+
       try {
+        // 1️⃣ Create Firebase Auth user
+        UserCredential userCred =
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: emailCtrl.text.trim(),
           password: passCtrl.text.trim(),
         );
 
+        // 2️⃣ Save additional info to Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCred.user!.uid)
+            .set({
+          'name': nameCtrl.text.trim(),
+          'email': emailCtrl.text.trim(),
+          'phone': "+${selectedCountry!.phoneCode} ${phoneCtrl.text.trim()}",
+          'country': selectedCountry!.name,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
         showMsg("Registration successful! Please login.");
 
         Navigator.pushReplacementNamed(context, '/login');
-
       } on FirebaseAuthException catch (e) {
         showMsg(e.message ?? "Registration failed");
+      } catch (e) {
+        showMsg("Something went wrong");
       }
     }
   }
@@ -89,30 +106,17 @@ class _RegisterPageState extends State<RegisterPage> {
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 25),
-
             field("Name", Icons.person, nameCtrl),
-
             const SizedBox(height: 16),
-
             countryPicker(),
-
             const SizedBox(height: 16),
-
-            // 🔹 Phone with country code beside
             phoneField(),
-
             const SizedBox(height: 16),
-
             field("Email", Icons.email, emailCtrl,
                 type: TextInputType.emailAddress),
-
             const SizedBox(height: 16),
-
-            // 🔹 Password with visibility toggle
             passwordField(),
-
             const SizedBox(height: 20),
-
             Row(
               children: [
                 Checkbox(
@@ -122,9 +126,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const Expanded(child: Text("I agree to Terms & Policy")),
               ],
             ),
-
             const SizedBox(height: 20),
-
             GradientButton(text: "REGISTER", onPressed: submit),
           ],
         ),
@@ -132,7 +134,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // 🔹 Normal field
   Widget field(String label, IconData icon, TextEditingController ctrl,
       {bool pass = false, TextInputType type = TextInputType.text}) {
     return TextField(
@@ -147,7 +148,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // 🔹 Password field with eye icon
   Widget passwordField() {
     return TextField(
       controller: passCtrl,
@@ -155,39 +155,24 @@ class _RegisterPageState extends State<RegisterPage> {
       decoration: InputDecoration(
         labelText: "Password",
         prefixIcon: const Icon(Icons.lock),
-
-        // 👁 Visibility icon
         suffixIcon: IconButton(
-          icon: Icon(
-            showPassword ? Icons.visibility : Icons.visibility_off,
-          ),
-          onPressed: () {
-            setState(() {
-              showPassword = !showPassword;
-            });
-          },
+          icon: Icon(showPassword ? Icons.visibility : Icons.visibility_off),
+          onPressed: () => setState(() => showPassword = !showPassword),
         ),
-
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  // 🔹 Phone field with country code
   Widget phoneField() {
     return TextField(
       controller: phoneCtrl,
       keyboardType: TextInputType.phone,
       decoration: InputDecoration(
         labelText: "Phone",
-
         prefixIcon: const Icon(Icons.phone),
-
-        // Country code beside field
-        prefixText: selectedCountry == null
-            ? ""
-            : "+${selectedCountry!.phoneCode} ",
-
+        prefixText:
+        selectedCountry == null ? "" : "+${selectedCountry!.phoneCode} ",
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
