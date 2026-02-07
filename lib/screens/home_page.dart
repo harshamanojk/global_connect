@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'emergency_bot_page.dart';
 import 'profile_page.dart';
-import 'settings_page.dart';
 import 'contacts_page.dart';
+import 'settings_page.dart';
+import 'emergency_bot_page.dart';
+import 'login_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,7 +28,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> fetchUserName() async {
-    if (user == null) return;
+    if (user == null) {
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const LoginPage()));
+      return;
+    }
 
     try {
       final doc = await FirebaseFirestore.instance
@@ -65,11 +70,9 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.person),
             onPressed: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
-                ),
-              );
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ProfilePage()));
             },
           ),
         ],
@@ -83,15 +86,12 @@ class _HomePageState extends State<HomePage> {
           children: [
             const SizedBox(height: 40),
             Text(
-              "Welcome, $userName!",
+              "Welcome",
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
+                  fontSize: 26, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
-            // Contacts button
             ElevatedButton.icon(
               icon: const Icon(Icons.contacts, size: 28),
               label: const Padding(
@@ -111,13 +111,11 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ContactsPage(),
-                  ),
+                      builder: (context) => const ContactsPage()),
                 );
               },
             ),
             const SizedBox(height: 20),
-            // Emergency Bot button
             ElevatedButton.icon(
               icon: const Icon(Icons.health_and_safety, size: 28),
               label: const Padding(
@@ -137,13 +135,11 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const EmergencyBotPage(),
-                  ),
+                      builder: (context) => const EmergencyBotPage()),
                 );
               },
             ),
             const SizedBox(height: 20),
-            // Settings button
             ElevatedButton.icon(
               icon: const Icon(Icons.settings, size: 28),
               label: const Padding(
@@ -163,8 +159,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const SettingsPage(),
-                  ),
+                      builder: (context) => const SettingsPage()),
                 );
               },
             ),

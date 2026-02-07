@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,154 +18,117 @@ class _ProfilePageState extends State<ProfilePage> {
   final user = FirebaseAuth.instance.currentUser;
 
   File? _imageFile;
-  String? imageUrl;
 
   String name = "";
   String email = "";
   String country = "";
+  String? imageUrl;
 
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    fetchUser();
   }
 
-  // Fetch user data from Firestore
-  Future<void> fetchUserData() async {
+  // ================= FETCH =================
+  Future<void> fetchUser() async {
     if (user == null) return;
 
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .get();
 
-      if (doc.exists) {
-        final data = doc.data()!;
-        setState(() {
-          name = data['name'] ?? "";
-          email = data['email'] ?? user!.email ?? "";
-          country = data['country'] ?? "";
-          imageUrl = data['imageUrl'];
-          loading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error fetching profile: $e");
+    if (doc.exists) {
+      final data = doc.data()!;
+
       setState(() {
+        name = data['name'];
+        email = data['email'];
+        country = data['country'];
+        imageUrl = data['imageUrl'];
         loading = false;
       });
     }
   }
 
-  // Pick profile image and upload to Firebase Storage
-  Future<void> _pickImage() async {
-    final pickedFile =
+  // ================= PICK IMAGE =================
+  Future<void> pickImage() async {
+    final picked =
     await ImagePicker().pickImage(source: ImageSource.gallery);
 
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-        loading = true;
-      });
+    if (picked == null) return;
 
-      try {
-        // Upload to Firebase Storage
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('profile_images')
-            .child('${user!.uid}.jpg');
+    _imageFile = File(picked.path);
 
-        await storageRef.putFile(_imageFile!);
-        final downloadUrl = await storageRef.getDownloadURL();
+    setState(() => loading = true);
 
-        // Save URL in Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user!.uid)
-            .update({'imageUrl': downloadUrl});
+    final ref = FirebaseStorage.instance
+        .ref("profiles/${user!.uid}.jpg");
 
-        setState(() {
-          imageUrl = downloadUrl;
-          loading = false;
-        });
-      } catch (e) {
-        debugPrint("Error uploading image: $e");
-        setState(() {
-          loading = false;
-        });
-      }
-    }
+    await ref.putFile(_imageFile!);
+
+    final url = await ref.getDownloadURL();
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .update({'imageUrl': url});
+
+    setState(() {
+      imageUrl = url;
+      loading = false;
+    });
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("My Profile"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Profile")),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             GestureDetector(
-              onTap: _pickImage,
+              onTap: pickImage,
               child: CircleAvatar(
                 radius: 55,
-                backgroundColor: Colors.blue,
-                backgroundImage: _imageFile != null
-                    ? FileImage(_imageFile!)
-                    : (imageUrl != null ? NetworkImage(imageUrl!) : null)
-                as ImageProvider?,
-                child: (_imageFile == null && imageUrl == null)
-                    ? const Icon(
-                  Icons.person,
-                  size: 60,
-                  color: Colors.white,
-                )
+                backgroundImage: imageUrl != null
+                    ? NetworkImage(imageUrl!)
+                    : null,
+                child: imageUrl == null
+                    ? const Icon(Icons.person, size: 50)
                     : null,
               ),
             ),
-            const SizedBox(height: 15),
-            const Text(
-              "Tap to change profile picture",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 30),
-            profileItem("Name", name),
-            const SizedBox(height: 15),
-            profileItem("Email", email),
-            const SizedBox(height: 15),
-            profileItem("Country", country),
+
+            const SizedBox(height: 20),
+
+            info("Name", name),
+            info("Email", email),
+            info("Country", country),
+
             const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LoginPage(),
-                    ),
-                        (route) => false,
-                  );
-                },
-                child: const Text(
-                  "LOGOUT",
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
+
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const LoginPage()),
+                      (route) => false,
+                );
+              },
+              child: const Text("LOGOUT"),
             ),
           ],
         ),
@@ -174,26 +136,22 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Profile row widget
-  Widget profileItem(String title, String value) {
+  Widget info(String t, String v) {
     return Container(
       width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        border: Border.all(),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
-          const SizedBox(height: 5),
-          Text(
-            value.isEmpty ? "Not Provided" : value,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-          ),
+          Text(t, style: const TextStyle(color: Colors.grey)),
+          Text(v,
+              style:
+              const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
         ],
       ),
     );

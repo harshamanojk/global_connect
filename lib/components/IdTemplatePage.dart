@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, file_names
+// ignore_for_file: use_build_context_synchronously
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -16,45 +16,54 @@ class IdTemplatePage extends StatefulWidget {
 class _IdTemplatePageState extends State<IdTemplatePage> {
   File? imageFile;
   bool scanning = false;
+  bool loadingCamera = false;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 300), () {
-      scanId();
-    });
+    // Automatically open camera after a short delay
+    Future.delayed(const Duration(milliseconds: 300), scanId);
   }
 
-  /// Step 1: Capture Image
+  // ================= OPEN CAMERA =================
   Future<void> scanId() async {
+    if (loadingCamera) return;
+
     try {
+      setState(() => loadingCamera = true);
+
       final picker = ImagePicker();
       final photo = await picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
       );
 
+      // User canceled camera
       if (photo == null) {
         Navigator.pop(context, false);
         return;
       }
 
-      // Step 2: Crop Image
-      File? cropped = await cropImage(File(photo.path));
-      if (cropped == null) return;
+      final cropped = await cropImage(File(photo.path));
 
-      setState(() {
-        imageFile = cropped;
-      });
+      // User canceled crop
+      if (cropped == null) {
+        Navigator.pop(context, false);
+        return;
+      }
 
+      setState(() => imageFile = cropped);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Camera error: $e")),
+        const SnackBar(content: Text("Failed to open camera")),
       );
+      Navigator.pop(context, false);
+    } finally {
+      setState(() => loadingCamera = false);
     }
   }
 
-  /// Crop Image
+  // ================= CROP IMAGE =================
   Future<File?> cropImage(File file) async {
     final croppedFile = await ImageCropper().cropImage(
       sourcePath: file.path,
@@ -65,9 +74,7 @@ class _IdTemplatePageState extends State<IdTemplatePage> {
           toolbarWidgetColor: Colors.white,
           lockAspectRatio: false,
         ),
-        IOSUiSettings(
-          title: 'Crop ID',
-        ),
+        IOSUiSettings(title: 'Crop ID'),
       ],
     );
 
@@ -75,8 +82,8 @@ class _IdTemplatePageState extends State<IdTemplatePage> {
     return File(croppedFile.path);
   }
 
-  /// Submit Image (with loading)
-  void submit() async {
+  // ================= VERIFY =================
+  Future<void> verify() async {
     if (imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please scan your ID")),
@@ -86,58 +93,67 @@ class _IdTemplatePageState extends State<IdTemplatePage> {
 
     setState(() => scanning = true);
 
-    // Show loading for 2 seconds to simulate verification
-    await Future.delayed(const Duration(seconds: 2));
+    // Simulate verification delay
+    await Future.delayed(const Duration(seconds: 1));
 
     setState(() => scanning = false);
 
-    // Success → go back to RegisterPage
+    // SUCCESS → return true to RegisterPage
     Navigator.pop(context, true);
   }
 
+  // ================= PREVENT BACK EXIT =================
+  Future<bool> onWillPop() async {
+    Navigator.pop(context, false); // Return false if back pressed
+    return false;
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Scan ID")),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-
-            Expanded(
-              child: Center(
-                child: scanning
-                    ? const CircularProgressIndicator()
-                    : imageFile == null
-                    ? const Text("Opening Camera...")
-                    : ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    imageFile!,
-                    fit: BoxFit.contain,
+    return WillPopScope(
+      onWillPop: onWillPop,
+      child: Scaffold(
+        appBar: AppBar(title: const Text("Scan ID")),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: scanning
+                      ? const CircularProgressIndicator()
+                      : imageFile == null
+                      ? const Text("Opening Camera...")
+                      : ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      imageFile!,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Rescan Button
-            if (imageFile != null && !scanning)
-              GradientButton(
-                text: "RESCAN",
-                onPressed: scanId,
-              ),
+              // RESCAN BUTTON
+              if (imageFile != null && !scanning)
+                GradientButton(
+                  text: "RESCAN",
+                  onPressed: scanId,
+                ),
 
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // Verify Button
-            if (imageFile != null && !scanning)
-              GradientButton(
-                text: "VERIFY ID",
-                onPressed: submit,
-              ),
-          ],
+              // VERIFY BUTTON
+              if (imageFile != null && !scanning)
+                GradientButton(
+                  text: "VERIFY ID",
+                  onPressed: verify,
+                ),
+            ],
+          ),
         ),
       ),
     );

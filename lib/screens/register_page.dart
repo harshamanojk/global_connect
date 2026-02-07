@@ -1,10 +1,11 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'package:global_connect/components/IdTemplatePage.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:global_connect/components/IdTemplatePage.dart';
 import '../components/gradient_button.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -21,13 +22,19 @@ class _RegisterPageState extends State<RegisterPage> {
   final passCtrl = TextEditingController();
 
   Country? selectedCountry;
+
   bool agree = false;
   bool showPassword = false;
+  bool loading = false;
 
-  void submit() async {
-    if (nameCtrl.text.isEmpty ||
-        phoneCtrl.text.isEmpty ||
-        emailCtrl.text.isEmpty ||
+  // ================= SUBMIT =================
+  Future<void> submit() async {
+    if (loading) return;
+
+    // ---------- VALIDATION ----------
+    if (nameCtrl.text.trim().isEmpty ||
+        phoneCtrl.text.trim().isEmpty ||
+        emailCtrl.text.trim().isEmpty ||
         passCtrl.text.isEmpty ||
         selectedCountry == null ||
         !agree) {
@@ -35,51 +42,86 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Navigate to ID Template page
-    final result = await Navigator.push(
+    if (!emailCtrl.text.contains("@")) {
+      showMsg("Enter a valid email");
+      return;
+    }
+
+    if (passCtrl.text.length < 6) {
+      showMsg("Password must be at least 6 characters");
+      return;
+    }
+
+    // ---------- ID SCAN ----------
+    final bool? scanResult = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const IdTemplatePage(),
-      ),
+      MaterialPageRoute(builder: (_) => const IdTemplatePage()),
     );
 
-    if (result == true) {
-      setState(() {});
+    if (scanResult != true) {
+      showMsg("ID scan failed. Registration cancelled.");
+      return;
+    }
 
-      try {
-        // 1️⃣ Create Firebase Auth user
-        UserCredential userCred =
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: emailCtrl.text.trim(),
-          password: passCtrl.text.trim(),
-        );
+    UserCredential? userCred;
 
-        // 2️⃣ Save additional info to Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCred.user!.uid)
-            .set({
-          'name': nameCtrl.text.trim(),
-          'email': emailCtrl.text.trim(),
-          'phone': "+${selectedCountry!.phoneCode} ${phoneCtrl.text.trim()}",
-          'country': selectedCountry!.name,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+    // ---------- FIREBASE ----------
+    try {
+      setState(() => loading = true);
+      showMsg("Creating account...");
 
-        showMsg("Registration successful! Please login.");
+      // Create Auth Account
+      userCred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: emailCtrl.text.trim(),
+        password: passCtrl.text.trim(),
+      );
 
-        Navigator.pushReplacementNamed(context, '/login');
-      } on FirebaseAuthException catch (e) {
-        showMsg(e.message ?? "Registration failed");
-      } catch (e) {
-        showMsg("Something went wrong");
+      final uid = userCred.user!.uid;
+
+      // Save User in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'name': nameCtrl.text.trim(),
+        'email': emailCtrl.text.trim(),
+        'phone': "+${selectedCountry!.phoneCode} ${phoneCtrl.text.trim()}",
+        'country': selectedCountry!.name,
+        'verified': true,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      showMsg("Registration successful!");
+
+      // ---------- REDIRECT TO LOGIN ----------
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
+
+    // ---------- AUTH ERROR ----------
+    on FirebaseAuthException catch (e) {
+      showMsg(e.message ?? "Registration failed");
+    }
+
+    // ---------- OTHER ERROR ----------
+    catch (e) {
+      showMsg("Error: $e");
+
+      // Rollback Auth if Firestore fails
+      if (userCred?.user != null) {
+        await userCred!.user!.delete();
       }
+    }
+
+    finally {
+      setState(() => loading = false);
     }
   }
 
+  // ================= MESSAGE =================
   void showMsg(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   @override
@@ -91,6 +133,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,13 +170,16 @@ class _RegisterPageState extends State<RegisterPage> {
               ],
             ),
             const SizedBox(height: 20),
-            GradientButton(text: "REGISTER", onPressed: submit),
+            loading
+                ? const CircularProgressIndicator()
+                : GradientButton(text: "REGISTER", onPressed: submit),
           ],
         ),
       ),
     );
   }
 
+  // ================= TEXT FIELD =================
   Widget field(String label, IconData icon, TextEditingController ctrl,
       {bool pass = false, TextInputType type = TextInputType.text}) {
     return TextField(
@@ -156,7 +202,8 @@ class _RegisterPageState extends State<RegisterPage> {
         labelText: "Password",
         prefixIcon: const Icon(Icons.lock),
         suffixIcon: IconButton(
-          icon: Icon(showPassword ? Icons.visibility : Icons.visibility_off),
+          icon:
+          Icon(showPassword ? Icons.visibility : Icons.visibility_off),
           onPressed: () => setState(() => showPassword = !showPassword),
         ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -183,7 +230,9 @@ class _RegisterPageState extends State<RegisterPage> {
       onTap: () {
         showCountryPicker(
           context: context,
-          onSelect: (c) => setState(() => selectedCountry = c),
+          onSelect: (c) {
+            setState(() => selectedCountry = c);
+          },
         );
       },
       child: Container(
